@@ -1,0 +1,77 @@
+Bootstrap: docker
+From: nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04
+
+%labels
+    Maintainer Jinhua Liang
+    Description Clean Python 3.8 Environment for YuE
+
+%post
+    # System updates and essentials
+    apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libssl-dev \
+        zlib1g-dev \
+        libncurses5-dev \
+        libbz2-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        wget \
+        curl \
+        llvm \
+        libncursesw5-dev \
+        xz-utils \
+        tk-dev \
+        libxml2-dev \
+        libxmlsec1-dev \
+        libffi-dev \
+        liblzma-dev \
+        git-lfs \
+        ca-certificates
+    
+    # Clear apt cache
+    rm -rf /var/lib/apt/lists/*
+
+    # Install git-lfs
+    git lfs install
+
+    # Build Python 3.8 from source
+    cd /opt
+    wget https://www.python.org/ftp/python/3.8.18/Python-3.8.18.tgz
+    tar -xf Python-3.8.18.tgz
+    cd Python-3.8.18
+    ./configure --enable-optimizations --prefix=/usr/local
+    make -j$(nproc)
+    make altinstall
+
+    # Install pip and upgrade tools
+    /usr/local/bin/python3.8 -m ensurepip --upgrade
+    /usr/local/bin/python3.8 -m pip install --upgrade pip setuptools wheel
+
+    # Install Python packages
+    /usr/local/bin/python3.8 -m pip install \
+        torch \
+        omegaconf \
+        torchaudio \
+        einops \
+        numpy \
+        transformers \
+        sentencepiece \
+        tqdm \
+        tensorboard \
+        descript-audiotools>=0.7.2 \
+        descript-audio-codec \
+        scipy \
+        accelerate>=0.26.0
+
+    /usr/local/bin/python3.8 -m pip install flash-attn --no-build-isolation
+
+    # Symlink python3.8 as default python3
+    ln -s /usr/local/bin/python3.8 /usr/local/bin/python3 || true
+    ln -s /usr/local/bin/pip3.8 /usr/local/bin/pip3 || true
+
+%environment
+    export PATH=/usr/local/bin:$PATH
+    export PYTHONIOENCODING=utf-8
+
+%runscript
+    echo "Welcome to YuE container (Python 3.8)"
